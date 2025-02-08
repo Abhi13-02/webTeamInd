@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+        
+
+// Define enum for user roles within a group
+enum GroupRole {
+  ADMIN
+  MEMBER
+}
+
+// Define enum for expense splitting methods
+enum SplitMethod {
+  EVEN
+  CUSTOM
+}
+
+model User {
+  id             String            @id @default(uuid())
+  email          String            @unique
+  clerkUserID    String            @unique
+  imageUrl       String
+  userName       String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  // Relations
+  groupsCreated  Group[]           @relation("GroupCreator")
+  groupMembers   GroupMember[]
+  expenses       Expense[]         @relation("ExpenseCreator")
+  expenseShares  ExpenseShare[]
+  settlementsFrom Settlement[]     @relation("SettlementFrom")
+  settlementsTo   Settlement[]     @relation("SettlementTo")
+
+  @@map("users")
+  // (Optional) Index on email is redundant because of @unique but you might index common fields if needed.
+}
+
+model Group {
+  id           String          @id @default(uuid())
+  name         String
+  description  String?
+  goalBudget   Decimal?        @db.Decimal(10,2)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  createdBy    String
+  // Relations
+  creator      User            @relation("GroupCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  members      GroupMember[]
+  expenses     Expense[]
+  settlements  Settlement[]
+
+  @@map("groups")
+  // Index groups by the creator for faster lookups when you want to show a user's created groups.
+  @@index([createdBy])
+}
+
+model GroupMember {
+  id        String    @id @default(uuid())
+  userId    String
+  groupId   String
+  role      GroupRole @default(MEMBER)
+  joinedAt  DateTime  @default(now())
+  // Relations
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("group_members")
+  // A composite unique constraint to ensure a user can only be in a given group once.
+  @@unique([groupId, userId])
+  // Additional indexes if you query by group or user individually:
+  @@index([groupId])
+  @@index([userId])
+}
+
+model Expense {
+  id              String     @id @default(uuid())
+  groupId         String
+  createdById     String?
+  description     String?
+  amount          Decimal    @db.Decimal(10,2)
+  date            DateTime   @default(now())
+  splittingMethod SplitMethod
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  // Relations
+  group           Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy       User?      @relation("ExpenseCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  shares          ExpenseShare[]
+
+  @@map("expenses")
+  // Index for faster retrieval of expenses by group and by creator.
+  @@index([groupId])
+  @@index([createdById])
+}
+
+model ExpenseShare {
+  id         String   @id @default(uuid())
+  expenseId  String
+  userId     String?
+  share      Decimal  @db.Decimal(10,2)
+  // Relations
+  expense    Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("expense_shares")
+  // Index on expenseId helps when you retrieve all shares for a particular expense.
+  @@index([expenseId])
+  // Optionally index by user if you frequently query shares for a specific user.
+  @@index([userId])
+}
+
+model Settlement {
+  id         String   @id @default(uuid())
+  groupId    String
+  fromUserId String?
+  toUserId   String?
+  amount     Decimal  @db.Decimal(10,2)
+  settled    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  // Relations
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromUser   User?    @relation("SettlementFrom", fields: [fromUserId], references: [id], onDelete: SetNull)
+  toUser     User?    @relation("SettlementTo", fields: [toUserId], references: [id], onDelete: SetNull)
+
+  @@map("settlements")
+  // Index settlements by group and by the involved users for quick lookups.
+  @@index([groupId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  // If you often need to query a settlement between two specific users in a group,
+  // a composite index can be beneficial:
+  @@index([groupId, fromUserId, toUserId])
+}
+
