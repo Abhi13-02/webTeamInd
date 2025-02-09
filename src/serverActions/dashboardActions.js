@@ -117,7 +117,13 @@ export async function getGroupsForUser() {
       },
       include: {
         // Include the creator information
-        creator: true,
+        creator: {
+          select: {
+            clerkUserID: true,
+            email: true,
+            userName: true,
+          }
+        },
         // Include members with their role and basic user info
         members: {
           select: {

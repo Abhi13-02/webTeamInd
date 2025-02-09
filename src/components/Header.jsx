@@ -5,7 +5,7 @@ import { Button } from './ui/button'
 import { checkUser } from '@/lib/checkUser'
 
 const Header = async() => {
-  await checkUser();
+   const user = await checkUser();
 
   return (
     <header className=" h-16  w-full bg-gray-300 shadow-md ">
@@ -17,6 +17,10 @@ const Header = async() => {
 
         {/* Authentication buttons on the right */}
         <div className="flex items-center space-x-4 ">
+          <Link href="/dashboard">
+              <Button className="mr-4 bg-blue-600">Dashboard</Button>
+          </Link>
+          <span className='md:block hidden'>Welcome Back!{" "}{user.userName}</span>
           <SignedOut>
             <SignInButton forceRedirectUrl='/dashboard'>
               <Button >

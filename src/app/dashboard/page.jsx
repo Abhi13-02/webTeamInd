@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -11,20 +13,12 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from "@/components/ui/drawer";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
 import { useUser } from "@clerk/nextjs";
 import { createGroup, deleteGroup, getGroupsForUser } from "@/serverActions/dashboardActions";
 
 export default function Dashboard() {
   // State to store groups
   const [groups, setGroups] = useState([]);
-  // const [role, setRole] = useState(null);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState(null);
 
@@ -58,7 +52,6 @@ export default function Dashboard() {
         throw new Error("Failed to fetch groups");
       }
       setGroups(res.data);
-      // setRole(res.data.user);
     } catch (error) {
       setGroupsError(error);
       toast.error(error.message);
@@ -96,7 +89,6 @@ export default function Dashboard() {
         throw new Error("Failed to search users");
       }
       const data = await res.json();
-      // Expect data to be an array of user objects: [{ id, userName, email, imageUrl }, ...]
       setSearchResults(data);
     } catch (error) {
       toast.error(error.message || "User search failed");
@@ -105,13 +97,11 @@ export default function Dashboard() {
 
   // Handle adding a user from search results as a member
   const handleAddMember = (userToAdd) => {
-    // Avoid duplicates.
     if (selectedMembers.some((member) => member.id === userToAdd.id)) {
       toast("User already added");
       return;
     }
     setSelectedMembers((prev) => [...prev, userToAdd]);
-    // Clear search results for a cleaner UI
     setSearchResults([]);
     setSearchQuery("");
   };
@@ -126,7 +116,6 @@ export default function Dashboard() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Send selected members IDs along with group details.
       const payload = {
         name: formData.name,
         description: formData.description,
@@ -140,7 +129,6 @@ export default function Dashboard() {
       }
       toast.success("Group created successfully");
       setDrawerOpen(false);
-      // Clear form and selected members
       setFormData({ name: "", description: "", goalBudget: "" });
       setSelectedMembers([]);
       fetchGroups();
@@ -180,12 +168,8 @@ export default function Dashboard() {
         ) : groups && groups.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {groups.map((group) => {
-              // Determine the current user's role in the group.
-              // (Assuming that group.createdBy holds the creator's id and group.members contains the groupMember records.)
-              const memberInfo = group.members.find(
-                (m) => m.user.clerkUserId === user.id
-              );
-              const role = memberInfo ? memberInfo.role : "Unknown";
+               const role  = group.creator.clerkUserID === user.id ? "ADMIN" : "MEMBER";
+                
               return (
                 <Card key={group.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
@@ -229,7 +213,7 @@ export default function Dashboard() {
               Fill out the form below to create a new group.
             </DrawerDescription>
           </DrawerHeader>
-          <form onSubmit={handleCreateGroup} className="space-y-4 mt-4">
+          <form onSubmit={handleCreateGroup} className="space-y-6 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Name
@@ -239,33 +223,8 @@ export default function Dashboard() {
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-3 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
                 required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                rows={3}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Goal Budget
-              </label>
-              <input
-                type="number"
-                name="goalBudget"
-                value={formData.goalBudget}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                step="0.01"
               />
             </div>
             {/* Add Members Section */}
@@ -278,21 +237,18 @@ export default function Dashboard() {
                 placeholder="Search by username..."
                 value={searchQuery}
                 onChange={handleSearchChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-3 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
               />
               {/* Display search results */}
               {searchResults.length > 0 && (
-                <ul className="border border-gray-200 mt-2 max-h-40 overflow-auto rounded">
+                <ul className="border border-gray-200 mt-2 max-h-40 overflow-auto rounded-lg bg-white shadow-sm">
                   {searchResults.map((result) => (
                     <li
                       key={result.id}
                       className="flex justify-between items-center p-2 hover:bg-gray-100"
                     >
                       <span>{result.userName || result.email}</span>
-                      <Button
-                        size="sm"
-                        onClick={() => handleAddMember(result)}
-                      >
+                      <Button size="sm" onClick={() => handleAddMember(result)}>
                         Add
                       </Button>
                     </li>
@@ -301,27 +257,48 @@ export default function Dashboard() {
               )}
               {/* Display selected members */}
               {selectedMembers.length > 0 && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-2 space-y-2">
                   <p className="text-sm font-medium text-gray-700">
                     Selected Members:
                   </p>
                   {selectedMembers.map((member) => (
                     <div
                       key={member.id}
-                      className="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200"
+                      className="flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-200"
                     >
                       <span>{member.userName || member.email}</span>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleRemoveMember(member.id)}
-                      >
+                      <Button size="sm" variant="destructive" onClick={() => handleRemoveMember(member.id)}>
                         Remove
                       </Button>
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+                className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-3 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+              ></textarea>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Goal Budget
+              </label>
+              <input
+                type="number"
+                name="goalBudget"
+                value={formData.goalBudget}
+                onChange={handleInputChange}
+                step="0.01"
+                className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-3 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+              />
             </div>
             <div className="flex justify-end">
               <Button type="submit" disabled={loading}>
@@ -334,3 +311,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+
