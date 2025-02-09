@@ -3,7 +3,7 @@ import { db } from "@/lib/prisma";
 
 export async function GET(req, { params }) {
   // Extract the dynamic parameter (no await needed).
-  const { groupID: groupId } = params;
+  const { groupID: groupId } = await params;
 
   try {
     // Fetch group details including its members and each member's user info.

@@ -20,8 +20,12 @@ const Header = async() => {
           <Link href="/dashboard">
               <Button className="mr-4 bg-blue-600">Dashboard</Button>
           </Link>
-          <span className='md:block hidden'>Welcome Back!{" "}{user.userName}</span>
-          <SignedOut>
+          {
+            user?.userName && (
+              <span className='md:block hidden'>Welcome Back!{" "}{user?.userName}</span>
+            )
+          }
+          <SignedOut onClick={() => {window.location.href = '/sign-in'}}>
             <SignInButton forceRedirectUrl='/dashboard'>
               <Button >
                 Login

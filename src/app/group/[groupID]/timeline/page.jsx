@@ -30,17 +30,17 @@ const ExpensesGraph = () => {
         const res = await fetch(
           `/api/group/${groupID}/expensesAggregate?period=${period}`
         );
-        if (!res.ok) {
+        if (!res?.ok) {
           throw new Error("Failed to fetch aggregated expenses");
         }
-        const result = await res.json();
-        if (result.success) {
-          setData(result.data);
+        const result = await res?.json();
+        if (result?.success) {
+          setData(result?.data || []);
         } else {
           throw new Error("Error fetching data");
         }
       } catch (error) {
-        toast.error(error.message || "Something went wrong");
+        toast.error(error?.message || "Something went wrong");
       } finally {
         setLoading(false);
       }
@@ -49,42 +49,40 @@ const ExpensesGraph = () => {
   }, [groupID, period]);
 
   // Call the AI summarization API whenever the aggregated data changes.
-//   useEffect(() => {
-//     // Only fetch AI summary if there is data.
-//     if (data && data.length > 0) {
-//       const fetchAi = async () => {
-//         try {
-//           const res = await fetch(`/api/aisummary`, {
-//             method: "POST",
-//             headers: { "Content-Type": "application/json" },
-//             // Send the aggregated expense data as a string in the 'message' field.
-//             body: JSON.stringify({ message: JSON.stringify(data) }),
-//           });
-//           if (!res.ok) {
-//             throw new Error("Failed to fetch AI summary");
-//           }
-//           const result = await res.json();
-//           if (result.aiResponse) {
-//             setAiSummary(result.aiResponse);
-//           } else {
-//             throw new Error("Error fetching AI data");
-//           }
-//         } catch (error) {
-//           toast.error(error.message || "Something went wrong in AI");
-//         } finally {
-//           setAiLoading(false);
-//         }
-//       };
+  useEffect(() => {
+    if (data?.length > 0) {
+      const fetchAi = async () => {
+        try {
+          const res = await fetch(`/api/aisummary`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: JSON.stringify(data) }),
+          });
+          if (!res?.ok) {
+            throw new Error("Failed to fetch AI summary");
+          }
+          const result = await res?.json();
+          if (result?.aiResponse) {
+            setAiSummary(result?.aiResponse);
+          } else {
+            throw new Error("Error fetching AI data");
+          }
+        } catch (error) {
+          toast.error(error?.message || "Something went wrong in AI");
+        } finally {
+          setAiLoading(false);
+        }
+      };
 
-//       setAiLoading(true);
-//       fetchAi();
-//     }
-//   }, [data]);
+      setAiLoading(true);
+      fetchAi();
+    }
+  }, [data]);
 
   // Extract distinct member names from the data.
   const memberNames = new Set();
-  data.forEach((item) => {
-    Object.keys(item).forEach((key) => {
+  data?.forEach((item) => {
+    Object.keys(item || {}).forEach((key) => {
       if (key !== "period") {
         memberNames.add(key);
       }
@@ -115,7 +113,7 @@ const ExpensesGraph = () => {
         <select
           id="period"
           value={period}
-          onChange={(e) => setPeriod(e.target.value)}
+          onChange={(e) => setPeriod(e?.target?.value)}
           className="p-2 border border-gray-300 rounded"
         >
           <option value="month">Month</option>
@@ -125,7 +123,7 @@ const ExpensesGraph = () => {
       </div>
       {loading ? (
         <p>Loading data...</p>
-      ) : data.length === 0 ? (
+      ) : data?.length === 0 ? (
         <p>No expense data found.</p>
       ) : (
         <ResponsiveContainer width="100%" height={400}>
@@ -137,7 +135,7 @@ const ExpensesGraph = () => {
             <YAxis />
             <Tooltip />
             <Legend />
-            {memberNamesArray.map((member, index) => (
+            {memberNamesArray?.map((member, index) => (
               <Line
                 key={member}
                 type="monotone"
@@ -151,7 +149,7 @@ const ExpensesGraph = () => {
       )}
 
       {/* AI Summary Section */}
-      {/* <div className="mt-8">
+      <div className="mt-8">
         {aiLoading ? (
           <p>Loading AI summary...</p>
         ) : aiSummary ? (
@@ -162,7 +160,7 @@ const ExpensesGraph = () => {
         ) : (
           <p>No AI summary available.</p>
         )}
-      </div> */}
+      </div>
     </div>
   );
 };
