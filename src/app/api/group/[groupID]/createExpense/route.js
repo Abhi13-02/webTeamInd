@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req, { params }) {
   // Destructure groupID from params; note: ensure your folder name matches "groupID" exactly.

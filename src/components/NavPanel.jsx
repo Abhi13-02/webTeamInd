@@ -17,7 +17,7 @@ const navItems = [
   { label: "Summary", path: "" },
   { label: "My Dues", path: "myDues" },
   { label: "Who Owes Me", path: "whoOwesMe" },
-  { label: "Balances", path: "balances" },
+  { label: "All Expenses", path: "allExpenses" },
   { label: "Settle UP", path: "settleUp" },
 ];
 

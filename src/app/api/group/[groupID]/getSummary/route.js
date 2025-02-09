@@ -30,6 +30,12 @@ export async function GET(req, { params }) {
       },
     });
 
+    // Calculate the current total expense for the group.
+    const currentExpense = expenses.reduce(
+      (sum, exp) => sum + Number(exp.amount),
+      0
+    );
+
     // Fetch all expense shares for expenses in this group.
     const expenseShares = await db.expenseShare.findMany({
       where: {
@@ -56,7 +62,6 @@ export async function GET(req, { params }) {
     // Aggregate information for each member of the group.
     const memberAggregates = group.members.map((member) => {
       const memberId = member.userId;
-
       const clerkUserId = member.user.clerkUserID;
 
       // Sum expenses where this member is the creator.
@@ -81,8 +86,6 @@ export async function GET(req, { params }) {
 
       const settlementBalance = settlementCredit - settlementDebit;
       const netBalance = totalPaid - totalShare + settlementBalance;
-
-      // console.log("getsummary", member.user.userName)
 
       return {
         clerkUserId,
@@ -109,6 +112,7 @@ export async function GET(req, { params }) {
           name: group.name,
           description: group.description,
           goalBudget: group.goalBudget,
+          currentExpense, // total expense for the group
           createdAt: group.createdAt,
           updatedAt: group.updatedAt,
         },

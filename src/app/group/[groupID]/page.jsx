@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { format, set } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -15,6 +14,9 @@ import {
 } from "@/components/ui/drawer";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Bar } from "recharts";
+import BarGraphs from "@/components/visuals/BarGraphs";
+import PieCharts from "@/components/visuals/PieCharts";
 
 // Inline DatePicker Component using Popover and Calendar
 function DatePicker({ value, onChange, className }) {
@@ -36,8 +38,9 @@ export default function SummaryPage() {
   // Extract the groupID from the route parameters
   const { groupID } = useParams();
   const [group, setGroup] = useState(null);
-  const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState([]);
+  const [barData, setBarData] = useState([]);
 
   // State for controlling the expense creation drawer
   const [expenseDrawerOpen, setExpenseDrawerOpen] = useState(false);
@@ -55,6 +58,20 @@ export default function SummaryPage() {
   // Keys are member user IDs and values are the amount each member paid.
   const [customSplit, setCustomSplit] = useState({});
 
+  useEffect(() => {
+    const exampleData = members.map((member) => ({
+      userName: member.userName,
+      totalPaid: member.totalPaid,
+      totalShare: member.totalShare,
+      settlementCredit: member.settlementCredit,
+      settlementDebit: member.settlementDebit,
+      settlementBalance: member.settlementBalance,
+      netBalance: member.netBalance,
+    }));
+    setBarData(exampleData);
+  }, [members]);
+  
+
   // Fetch the group summary when groupID is available
   useEffect(() => {
     if (!groupID) return;
@@ -65,6 +82,7 @@ export default function SummaryPage() {
           throw new Error("Failed to fetch group summary");
         }
         const data = await res.json();
+        // Expecting response to be in the form: { success: true, data: { group: { ... }, members: [...] } }
         setGroup(data.data.group);
         setMembers(data.data.members);
       } catch (error) {
@@ -126,8 +144,9 @@ export default function SummaryPage() {
       }
       await res.json();
       toast.success("Expense created successfully");
+      window.location.reload()
       setExpenseDrawerOpen(false);
-      // Optionally, refresh the group summary or update local state as needed
+      // Optionally, refresh the group summary or update local state as needed.
     } catch (error) {
       toast.error(error.message || "Something went wrong");
     } finally {
@@ -143,43 +162,43 @@ export default function SummaryPage() {
     return <p className="p-4">Group not found.</p>;
   }
 
+  // Calculate progress for the goal budget.
+  const goalBudget = group.goalBudget ? parseFloat(group.goalBudget) : 0;
+  // Assuming group.currentExpense is provided by the API.
+  const currentExpense = group.currentExpense ? parseFloat(group.currentExpense) : 0;
+  const progressPercent = goalBudget > 0 ? Math.min((currentExpense / goalBudget) * 100, 100) : 0;
+  const progressBarColor = currentExpense > goalBudget ? "bg-red-500" : "bg-blue-500";
+
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6">{group.name} Summary</h1>
+      {/* Group Name */}
+      <h1 className="text-2xl font-bold mb-4">{group.name} Summary</h1>
       
-      {/* Group Description Card */}
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>Description</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>{group.description || "No description provided."}</p>
-        </CardContent>
-      </Card>
+      {/* Progress Bar */}
+      {goalBudget > 0 && (
+        <div className="mb-6">
+          <div className="mb-1 text-sm font-medium text-gray-700">
+            Budget Progress: {currentExpense} / {goalBudget}
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-4">
+            <div
+              className={`${progressBarColor} h-4 rounded-full`}
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+      )}
 
-      {/* Group Members Card */}
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>Members</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>Total Members: {members ? members.length : 0}</p>
-        </CardContent>
-      </Card>
-
-      {/* Button to open the New Expense drawer */}
+      {/* New Expense Button */}
       <div className="mt-6">
         <Button onClick={() => setExpenseDrawerOpen(true)} variant="outline">
           New Expense
         </Button>
       </div>
 
-      {/* Link to navigate to the full group details page */}
-      <div className="mt-6">
-        <Button asChild variant="outline">
-          <a href={`/group/${groupID}`}>Go to Group Details</a>
-        </Button>
-      </div>
+      {/* Bar Graphs */}
+      <PieCharts data={barData} />
+      <BarGraphs data={barData} />
 
       {/* Drawer for creating a new expense (opens from the bottom) */}
       <Drawer open={expenseDrawerOpen} onOpenChange={setExpenseDrawerOpen}>
@@ -287,3 +306,19 @@ export default function SummaryPage() {
     </div>
   );
 }
+
+// Inline DatePicker Component using Popover and Calendar
+// function DatePicker({ value, onChange, className }) {
+//   return (
+//     <Popover>
+//       <PopoverTrigger asChild>
+//         <Button variant="outline" className={className}>
+//           {value ? format(value, "PPP") : "Select date"}
+//         </Button>
+//       </PopoverTrigger>
+//       <PopoverContent className="p-0">
+//         <Calendar mode="single" selected={value} onSelect={onChange} initialFocus />
+//       </PopoverContent>
+//     </Popover>
+//   );
+// }
