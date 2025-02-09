@@ -112,7 +112,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-screen mt-28 p-4 bg-gray-100">
+    <div className="h-screen  p-4 bg-gray-100">
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <Button onClick={() => setDrawerOpen(true)}>Create New Group</Button>

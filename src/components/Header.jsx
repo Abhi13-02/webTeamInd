@@ -6,9 +6,9 @@ import { checkUser } from '@/lib/checkUser'
 
 const Header = async() => {
   await checkUser();
-  
+
   return (
-    <header className="fixed top-0 w-full bg-white shadow-md z-50 ">
+    <header className=" h-16  w-full bg-gray-300 shadow-md ">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo on the left */}
         <Link href="/" className="text-2xl font-bold text-gray-800">
