@@ -4,7 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 
 export async function POST(req, { params }) {
   // Destructure groupID from params; note: ensure your folder name matches "groupID" exactly.
-  const { groupID: groupId } = params;
+  const { groupID: groupId } = await params;
   
   try {
     // Get the Clerk user ID from authentication.
