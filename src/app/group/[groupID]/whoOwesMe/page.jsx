@@ -67,7 +67,7 @@ const WhoOwesMePage = () => {
           {receivables.map((r) => (
             <Card key={r.id} className="transition-shadow hover:shadow-lg">
               <CardHeader>
-                <CardTitle>{r.fromUserName}</CardTitle>
+                <CardTitle>From:{r.expensePaidBy}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p>
