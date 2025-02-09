@@ -16,7 +16,11 @@ export async function GET(req, { params }) {
         // Include the entire related User object for the creator.
         createdBy: true,
         // Include all expense shares.
-        shares: true,
+        shares: {
+            include: {
+              user: true,  // This will include the related user object for each share.
+            }
+        }
       },
     });
 
