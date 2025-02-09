@@ -9,7 +9,7 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 
-// Define a color palette for the slices.
+// A simple color palette for the pie chart slices.
 const COLORS = [
   "#0088FE",
   "#00C49F",
@@ -28,41 +28,49 @@ const metrics = [
   { key: "totalShare", label: "Total Share" },
   { key: "settlementCredit", label: "Settlement Credit" },
   { key: "settlementDebit", label: "Settlement Debit" },
-//   { key: "settlementBalance", label: "Settlement Balance" },
-//   { key: "netBalance", label: "Net Balance" },
+  // Uncomment or add more metrics as needed.
+  // { key: "settlementBalance", label: "Settlement Balance" },
+  // { key: "netBalance", label: "Net Balance" },
 ];
 
-// Custom tooltip component that displays the original (actual) value.
-const CustomTooltip = ({ active, payload, label, metricLabel }) => {
-  if (active && payload && payload.length) {
-    const { actualValue } = payload[0].payload;
-    return (
-      <div className="bg-white border border-gray-300 p-2 shadow">
-        <p>{`${label} : ${actualValue}`}</p>
-        <p className="text-xs text-gray-500">{metricLabel}</p>
-      </div>
-    );
-  }
-  return null;
-};
+// This function transforms the raw data for a given metric.
+// Each object contains the userName, an absolute value (for sizing the pie),
+// and the actual value for display.
+const transformShares = (shares, metricKey) =>
+  shares.map((share) => ({
+    userName:
+      share.user && share.user.userName ? share.user.userName : share.userId,
+    absValue: Math.abs(Number(share[metricKey] || 0)), // if needed, adapt as necessary
+    actualValue: Number(share[metricKey] || 0),
+  }));
+
+// In many cases for expense shares, you might only have a single value per share.
+// If your data is directly passed as an array of objects with keys corresponding to the metric,
+// you might transform your data like this:
+const transformData = (data, metricKey) =>
+  data.map((item) => ({
+    userName: item.userName,
+    absValue: Math.abs(Number(item[metricKey])),
+    actualValue: Number(item[metricKey]),
+  }));
 
 const PieCharts = ({ data }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 m-10">
       {metrics.map((metric) => {
-        // Prepare chartData: each item contains userName, an absolute value for chart sizing, and the original value.
-        const chartData = data.map((item) => ({
-          userName: item.userName,
-          absValue: Math.abs(item[metric.key]),
-          actualValue: item[metric.key],
-        }));
+        // Transform the data for this metric.
+        // Here we assume `data` is an array of objects where each object has a property for each metric.
+        const chartData = transformData(data, metric.key);
 
-        // Calculate total metric value (absolute sum) to check if any data exists.
-        const totalMetric = chartData.reduce((sum, item) => sum + item.absValue, 0);
+        // Calculate the total absolute sum for this metric to decide if there is data to display.
+        const totalMetric = chartData.reduce(
+          (sum, item) => sum + item.absValue,
+          0
+        );
 
         return (
-          <div key={metric.key} className="w-full h-64">
-            <h3 className="text-lg font-bold mb-2">{metric.label}</h3>
+          <div key={metric.key} className="w-full h-64 my-10">
+            <h3 className="text-lg font-bold mb-2 w-full flex justify-center">{metric.label}</h3>
             {totalMetric === 0 ? (
               <p className="text-center text-gray-500">No data available</p>
             ) : (
@@ -75,9 +83,9 @@ const PieCharts = ({ data }) => {
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={({ name, payload }) =>
-                      `${name}: ${payload.actualValue}`
-                    }
+                    // label={({ name, payload }) =>
+                    //   `${name}: ${payload.actualValue}`
+                    // }
                   >
                     {chartData.map((entry, index) => (
                       <Cell
@@ -87,8 +95,8 @@ const PieCharts = ({ data }) => {
                     ))}
                   </Pie>
                   <Tooltip
-                    content={
-                      <CustomTooltip metricLabel={metric.label} />
+                    formatter={(value, name, props) =>
+                      `: ${props.payload.actualValue}`
                     }
                   />
                   <Legend />

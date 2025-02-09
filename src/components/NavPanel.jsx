@@ -18,6 +18,7 @@ const navItems = [
   { label: "My Dues", path: "myDues" },
   { label: "Who Owes Me", path: "whoOwesMe" },
   { label: "All Expenses", path: "allExpenses" },
+  { label: "Timeline", path: "timeline" },
   { label: "Settle UP", path: "settleUp" },
 ];
 
@@ -30,7 +31,7 @@ export default function NavPanel({groupID}) {
 
   // Function to render the list of nav links
   const renderNavLinks = () => (
-    <nav className="flex flex-col space-y-2 bg-blue-300">
+    <nav className="flex flex-col h-full space-y-2 bg-blue-300">
       {navItems.map((item) => (
         <Link key={item.path} href={`${base}/${item.path}`}>
           {/* Note: When using Next.js 13, you can pass className directly to Link */}

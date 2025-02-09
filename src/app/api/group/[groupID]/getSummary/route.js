@@ -27,6 +27,7 @@ export async function GET(req, { params }) {
       select: {
         amount: true,
         createdById: true,
+        splittingMethod: true,
       },
     });
 
@@ -39,9 +40,7 @@ export async function GET(req, { params }) {
     // Fetch all expense shares for expenses in this group.
     const expenseShares = await db.expenseShare.findMany({
       where: {
-        expense: {
-          groupId,
-        },
+        expense: { groupId },
       },
       select: {
         share: true,
@@ -49,9 +48,9 @@ export async function GET(req, { params }) {
       },
     });
 
-    // Fetch all settlements for this group.
+    // Fetch all unsettled settlements for this group.
     const settlements = await db.settlement.findMany({
-      where: { groupId },
+      where: { groupId, settled: false },
       select: {
         amount: true,
         fromUserId: true,
@@ -62,35 +61,32 @@ export async function GET(req, { params }) {
     // Aggregate information for each member of the group.
     const memberAggregates = group.members.map((member) => {
       const memberId = member.userId;
-      const clerkUserId = member.user.clerkUserID;
 
       // Sum expenses where this member is the creator.
       const totalPaid = expenses
-        .filter((exp) => exp.createdById === memberId)
+        .filter(exp => exp.createdById === memberId)
         .reduce((sum, exp) => sum + Number(exp.amount), 0);
 
       // Sum all expense shares assigned to this member.
       const totalShare = expenseShares
-        .filter((es) => es.userId === memberId)
+        .filter(es => es.userId === memberId)
         .reduce((sum, es) => sum + Number(es.share), 0);
 
-      // Sum of settlements where this member is the recipient.
+      // Sum of unsettled settlements where this member is the recipient.
       const settlementCredit = settlements
-        .filter((s) => s.toUserId === memberId)
+        .filter(s => s.toUserId === memberId)
         .reduce((sum, s) => sum + Number(s.amount), 0);
 
-      // Sum of settlements where this member is the payer.
+      // Sum of unsettled settlements where this member is the payer.
       const settlementDebit = settlements
-        .filter((s) => s.fromUserId === memberId)
+        .filter(s => s.fromUserId === memberId)
         .reduce((sum, s) => sum + Number(s.amount), 0);
 
       const settlementBalance = settlementCredit - settlementDebit;
       const netBalance = totalPaid - totalShare + settlementBalance;
 
       return {
-        clerkUserId,
         userId: memberId,
-        role: member.role,
         userName: member.user.userName,
         email: member.user.email,
         imageUrl: member.user.imageUrl,
@@ -103,7 +99,6 @@ export async function GET(req, { params }) {
       };
     });
 
-    // Return the aggregated summary data.
     return NextResponse.json({
       success: true,
       data: {
@@ -112,9 +107,9 @@ export async function GET(req, { params }) {
           name: group.name,
           description: group.description,
           goalBudget: group.goalBudget,
-          currentExpense, // total expense for the group
-          createdAt: group.createdAt,
-          updatedAt: group.updatedAt,
+          currentExpense,
+          createdAt: group.createdAt.toISOString(),
+          updatedAt: group.updatedAt.toISOString(),
         },
         members: memberAggregates,
       },

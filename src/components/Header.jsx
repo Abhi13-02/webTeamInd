@@ -12,7 +12,7 @@ const Header = async() => {
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo on the left */}
         <Link href="/" className="text-2xl font-bold text-gray-800">
-          MyWebsite
+          MoneyGuru
         </Link>
 
         {/* Authentication buttons on the right */}

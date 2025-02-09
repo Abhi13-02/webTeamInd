@@ -3,7 +3,7 @@ import { db } from "@/lib/prisma";
 
 export async function GET(req, { params }) {
   // Extract groupID from params (ensure your folder name matches [groupID])
-  const { groupID: groupId } = params;
+  const { groupID: groupId } = await params;
 
   try {
     // Fetch all expenses for the group, including all attributes and relations.
