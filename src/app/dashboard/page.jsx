@@ -1,10 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -14,7 +20,11 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 import { useUser } from "@clerk/nextjs";
-import { createGroup, deleteGroup, getGroupsForUser } from "@/serverActions/dashboardActions";
+import {
+  createGroup,
+  deleteGroup,
+  getGroupsForUser,
+} from "@/serverActions/dashboardActions";
 
 export default function Dashboard() {
   // State to store groups
@@ -40,6 +50,7 @@ export default function Dashboard() {
 
   // Get the current user from Clerk
   const { user } = useUser();
+  const router = useRouter();
 
   // Manually fetch groups for the current user
   const fetchGroups = async () => {
@@ -140,7 +151,9 @@ export default function Dashboard() {
   };
 
   // Handle group deletion
-  const handleDeleteGroup = async (groupId) => {
+  const handleDeleteGroup = async (groupId, e) => {
+    // Prevent card navigation if delete button is clicked.
+    if (e) e.stopPropagation();
     try {
       const res = await deleteGroup(groupId);
       if (!res.success) {
@@ -166,36 +179,41 @@ export default function Dashboard() {
         ) : groupsError ? (
           <p className="text-red-500">Error: {groupsError.message}</p>
         ) : groups && groups.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {groups.map((group) => {
-               const role  = group.creator.clerkUserID === user.id ? "ADMIN" : "MEMBER";
-                
+              // Determine user role
+              const role = group.creator.clerkUserID === user.id ? "ADMIN" : "MEMBER";
               return (
-                <Card key={group.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <CardTitle>{group.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p>{group.description || "No description provided."}</p>
-                    <p className="mt-2 text-sm text-gray-600">
-                      Members: {group.members.length} | Your Role: {role}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="flex justify-between items-center">
-                    <Link href={`/group/${group.id}`}>
-                      <Button variant="outline" size="sm">
-                        View Group
+                <div
+                  key={group.id}
+                  onClick={() => router.push(`/group/${group.id}`)}
+                  className="cursor-pointer"
+                >
+                  <Card className="hover:shadow-2xl transition transform hover:scale-105 rounded-2xl bg-white border border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="text-xl font-bold text-gray-800">
+                        {group.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-600">
+                        {group.description || "No description provided."}
+                      </p>
+                      <p className="mt-2 text-sm text-gray-500">
+                        Members: {group.members.length} | Your Role: {role}
+                      </p>
+                    </CardContent>
+                    <CardFooter className="flex justify-end">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => handleDeleteGroup(group.id, e)}
+                      >
+                        Delete
                       </Button>
-                    </Link>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteGroup(group.id)}
-                    >
-                      Delete
-                    </Button>
-                  </CardFooter>
-                </Card>
+                    </CardFooter>
+                  </Card>
+                </div>
               );
             })}
           </div>
@@ -267,7 +285,11 @@ export default function Dashboard() {
                       className="flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-200"
                     >
                       <span>{member.userName || member.email}</span>
-                      <Button size="sm" variant="destructive" onClick={() => handleRemoveMember(member.id)}>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleRemoveMember(member.id)}
+                      >
                         Remove
                       </Button>
                     </div>
@@ -311,5 +333,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-

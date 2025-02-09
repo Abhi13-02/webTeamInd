@@ -49,37 +49,37 @@ const ExpensesGraph = () => {
   }, [groupID, period]);
 
   // Call the AI summarization API whenever the aggregated data changes.
-  useEffect(() => {
-    // Only fetch AI summary if there is data.
-    if (data && data.length > 0) {
-      const fetchAi = async () => {
-        try {
-          const res = await fetch(`/api/aisummary`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            // Send the aggregated expense data as a string in the 'message' field.
-            body: JSON.stringify({ message: JSON.stringify(data) }),
-          });
-          if (!res.ok) {
-            throw new Error("Failed to fetch AI summary");
-          }
-          const result = await res.json();
-          if (result.aiResponse) {
-            setAiSummary(result.aiResponse);
-          } else {
-            throw new Error("Error fetching AI data");
-          }
-        } catch (error) {
-          toast.error(error.message || "Something went wrong in AI");
-        } finally {
-          setAiLoading(false);
-        }
-      };
+//   useEffect(() => {
+//     // Only fetch AI summary if there is data.
+//     if (data && data.length > 0) {
+//       const fetchAi = async () => {
+//         try {
+//           const res = await fetch(`/api/aisummary`, {
+//             method: "POST",
+//             headers: { "Content-Type": "application/json" },
+//             // Send the aggregated expense data as a string in the 'message' field.
+//             body: JSON.stringify({ message: JSON.stringify(data) }),
+//           });
+//           if (!res.ok) {
+//             throw new Error("Failed to fetch AI summary");
+//           }
+//           const result = await res.json();
+//           if (result.aiResponse) {
+//             setAiSummary(result.aiResponse);
+//           } else {
+//             throw new Error("Error fetching AI data");
+//           }
+//         } catch (error) {
+//           toast.error(error.message || "Something went wrong in AI");
+//         } finally {
+//           setAiLoading(false);
+//         }
+//       };
 
-      setAiLoading(true);
-      fetchAi();
-    }
-  }, [data]);
+//       setAiLoading(true);
+//       fetchAi();
+//     }
+//   }, [data]);
 
   // Extract distinct member names from the data.
   const memberNames = new Set();
@@ -151,7 +151,7 @@ const ExpensesGraph = () => {
       )}
 
       {/* AI Summary Section */}
-      <div className="mt-8">
+      {/* <div className="mt-8">
         {aiLoading ? (
           <p>Loading AI summary...</p>
         ) : aiSummary ? (
@@ -162,7 +162,7 @@ const ExpensesGraph = () => {
         ) : (
           <p>No AI summary available.</p>
         )}
-      </div>
+      </div> */}
     </div>
   );
 };

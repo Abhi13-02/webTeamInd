@@ -5,7 +5,8 @@ import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 
 export async function GET(req, { params }) {
-  const { groupID: groupId } = await params;
+  // Destructure params (no need to await params)
+  const { groupID: groupId } = params;
 
   try {
     // Authenticate and get current user via Clerk.
@@ -30,13 +31,13 @@ export async function GET(req, { params }) {
         settled: false,
       },
       include: {
-        // Include details about the debtor.
+        // Include details about the debtor (i.e., the user who paid the expense).
         fromUser: true,
       },
       orderBy: { createdAt: "asc" },
     });
 
-    // Convert Decimal and Date fields to plain types.
+    // Convert Decimal and Date fields to plain types and include additional expense info.
     const plainReceivables = receivables.map((r) => ({
       id: r.id,
       groupId: r.groupId,
@@ -44,9 +45,12 @@ export async function GET(req, { params }) {
       toUserId: r.toUserId,
       amount: r.amount.toString(),
       settled: r.settled,
-      createdAt: r.createdAt.toISOString(),
+      // Use settlement createdAt as the expense date.
+      expenseDate: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
-      fromUserName: r.fromUser?.userName || "Unknown",
+      // Include more info about who paid the expense.
+      expensePaidBy: r.fromUser?.userName || "Unknown",
+      expensePaidByEmail: r.fromUser?.email || "Unknown",
     }));
 
     return NextResponse.json({ success: true, data: plainReceivables }, { status: 200 });
