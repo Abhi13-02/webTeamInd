@@ -172,7 +172,7 @@ export default function SummaryPage() {
   return (
     <div className="p-4">
       {/* Group Name */}
-      <h1 className="text-2xl font-bold mb-4">{group.name} Summary</h1>
+      <h1 className="text-2xl font-bold mb-4">Group: {group.name}</h1>
       
       {/* Progress Bar */}
       {goalBudget > 0 && (

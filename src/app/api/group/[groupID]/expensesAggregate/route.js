@@ -25,7 +25,7 @@ function groupByPeriod(date, period) {
 }
 
 export async function GET(req, { params }) {
-  const { groupID: groupId } = params;
+  const { groupID: groupId } = await params;
 
   // Get the grouping period from the query string; default to "month"
   const { searchParams } = new URL(req.url);

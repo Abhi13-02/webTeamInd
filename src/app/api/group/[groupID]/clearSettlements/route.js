@@ -3,7 +3,7 @@ import { db } from "@/lib/prisma";
 
 export async function POST(req, { params }) {
   // Extract groupID from params. Ensure your folder is named [groupID].
-  const { groupID: groupId } = params;
+  const { groupID: groupId } = await params;
 
   try {
     // Delete all settlement records for the given group.

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 
 export async function GET(req, { params }) {
-  const { groupID: groupId } = await params; 
+  // Extract the dynamic parameter (no await needed).
+  const { groupID: groupId } = params;
 
   try {
     // Fetch group details including its members and each member's user info.
@@ -32,7 +33,6 @@ export async function GET(req, { params }) {
     });
 
     // Fetch all expense shares for CUSTOM expenses in this group.
-    // (Assuming that for EVEN splitting, we won't rely on these records.)
     const expenseShares = await db.expenseShare.findMany({
       where: {
         expense: { groupId },
@@ -43,9 +43,9 @@ export async function GET(req, { params }) {
       },
     });
 
-    // Fetch all settlements for this group.
+    // Fetch all unsettled settlements (settled: false) for this group.
     const settlements = await db.settlement.findMany({
-      where: { groupId },
+      where: { groupId, settled: false },
       select: {
         amount: true,
         fromUserId: true,
@@ -62,16 +62,15 @@ export async function GET(req, { params }) {
     // Aggregate information for each member of the group.
     const memberAggregates = group.members.map((member) => {
       const memberId = member.userId;
-      
-      // Total paid is the sum of amounts for expenses created by the member.
+
+      // Total paid: Sum of amounts for expenses created by this member.
       const totalPaid = expenses
-        .filter(exp => exp.createdById === memberId)
+        .filter((exp) => exp.createdById === memberId)
         .reduce((sum, exp) => sum + Number(exp.amount), 0);
 
-      // Compute total share for EVEN expenses: for each EVEN expense,
-      // each member owes expense.amount / totalMembers.
+      // For EVEN expenses, each member owes an equal share.
       const totalShareEven = expenses
-        .filter(exp => exp.splittingMethod === "EVEN")
+        .filter((exp) => exp.splittingMethod === "EVEN")
         .reduce(
           (sum, exp) => sum + Number(exp.amount) / group.members.length,
           0
@@ -79,22 +78,25 @@ export async function GET(req, { params }) {
 
       // For CUSTOM expenses, use the ExpenseShare records.
       const totalShareCustom = expenseShares
-        .filter(es => es.userId === memberId)
+        .filter((es) => es.userId === memberId)
         .reduce((sum, es) => sum + Number(es.share), 0);
 
-      // Total share is the sum of even split shares and custom shares.
+      // Total share that this member owes.
       const totalShare = totalShareEven + totalShareCustom;
 
-      // Settlements: sum credits (where member is recipient) and debits (where member is payer)
+      // Calculate settlement adjustments:
+      // - settlementCredit: money received by the member.
+      // - settlementDebit: money paid by the member.
       const settlementCredit = settlements
-        .filter(s => s.toUserId === memberId)
+        .filter((s) => s.toUserId === memberId)
         .reduce((sum, s) => sum + Number(s.amount), 0);
       const settlementDebit = settlements
-        .filter(s => s.fromUserId === memberId)
+        .filter((s) => s.fromUserId === memberId)
         .reduce((sum, s) => sum + Number(s.amount), 0);
       const settlementBalance = settlementCredit - settlementDebit;
 
-      // netBalance = totalPaid - totalShare + settlementBalance.
+      // netBalance: Positive means the member should receive money,
+      // negative means the member owes money.
       const netBalance = totalPaid - totalShare + settlementBalance;
 
       return {
@@ -104,13 +106,13 @@ export async function GET(req, { params }) {
       };
     });
 
-    // Greedy algorithm to settle debts.
+    // --- Greedy Settlement Algorithm ---
     // Separate members into creditors (netBalance > 0) and debtors (netBalance < 0).
     let creditors = memberAggregates
-      .filter(m => m.netBalance > 0)
+      .filter((m) => m.netBalance > 0)
       .sort((a, b) => b.netBalance - a.netBalance);
     let debtors = memberAggregates
-      .filter(m => m.netBalance < 0)
+      .filter((m) => m.netBalance < 0)
       .sort((a, b) => a.netBalance - b.netBalance);
 
     const transactions = [];
@@ -119,8 +121,9 @@ export async function GET(req, { params }) {
       const creditor = creditors[0];
       const debtor = debtors[0];
 
+      // Determine the settlement amount.
       const amount = Math.min(creditor.netBalance, -debtor.netBalance);
-      
+
       transactions.push({
         fromUserId: debtor.userId,
         fromUserName: debtor.userName,
@@ -129,9 +132,11 @@ export async function GET(req, { params }) {
         amount,
       });
 
+      // Adjust the net balances.
       creditor.netBalance -= amount;
       debtor.netBalance += amount;
 
+      // Remove settled members (tolerance for floating point imprecision).
       if (Math.abs(creditor.netBalance) < 0.001) {
         creditors.shift();
       }

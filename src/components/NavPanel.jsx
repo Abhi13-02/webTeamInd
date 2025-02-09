@@ -14,12 +14,12 @@ import {
 
 // Define your navigation items and their corresponding sub-paths
 const navItems = [
-  { label: "Summary", path: "" },
-  { label: "My Dues", path: "myDues" },
-  { label: "Who Owes Me", path: "whoOwesMe" },
-  { label: "All Expenses", path: "allExpenses" },
-  { label: "Timeline", path: "timeline" },
-  { label: "Settle UP", path: "settleUp" },
+  { label: "Summary 📊", path: "" },
+  { label: "My Dues 😢", path: "myDues" },
+  { label: "Who Owes Me 🤨", path: "whoOwesMe" },
+  { label: "All Expenses 💵", path: "allExpenses" },
+  { label: "Timeline(AI) 🤖", path: "timeline" },
+  { label: "Settle UP 🤝", path: "settleUp" },
 ];
 
 export default function NavPanel({ groupID }) {
@@ -30,7 +30,7 @@ export default function NavPanel({ groupID }) {
 
   // Render the navigation links with active highlighting and smooth animations.
   const renderNavLinks = () => (
-    <nav className="flex flex-col space-y-2">
+    <nav className="flex flex-col space-y-2 justify-center">
       {navItems.map((item) => {
         // Build the link href. If the item's path is empty, it simply uses the base.
         const linkHref = `${base}${item.path ? `/${item.path}` : ""}`;

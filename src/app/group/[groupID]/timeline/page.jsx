@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
   LineChart,
   Line,
@@ -19,6 +18,8 @@ const ExpensesGraph = () => {
   const [period, setPeriod] = useState("month");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(true);
+  const [aiSummary, setAiSummary] = useState("");
 
   // Fetch aggregated expense data when groupID or period changes.
   useEffect(() => {
@@ -26,7 +27,9 @@ const ExpensesGraph = () => {
     setLoading(true);
     const fetchData = async () => {
       try {
-        const res = await fetch(`/api/group/${groupID}/expensesAggregate?period=${period}`);
+        const res = await fetch(
+          `/api/group/${groupID}/expensesAggregate?period=${period}`
+        );
         if (!res.ok) {
           throw new Error("Failed to fetch aggregated expenses");
         }
@@ -44,6 +47,39 @@ const ExpensesGraph = () => {
     };
     fetchData();
   }, [groupID, period]);
+
+  // Call the AI summarization API whenever the aggregated data changes.
+  useEffect(() => {
+    // Only fetch AI summary if there is data.
+    if (data && data.length > 0) {
+      const fetchAi = async () => {
+        try {
+          const res = await fetch(`/api/aisummary`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            // Send the aggregated expense data as a string in the 'message' field.
+            body: JSON.stringify({ message: JSON.stringify(data) }),
+          });
+          if (!res.ok) {
+            throw new Error("Failed to fetch AI summary");
+          }
+          const result = await res.json();
+          if (result.aiResponse) {
+            setAiSummary(result.aiResponse);
+          } else {
+            throw new Error("Error fetching AI data");
+          }
+        } catch (error) {
+          toast.error(error.message || "Something went wrong in AI");
+        } finally {
+          setAiLoading(false);
+        }
+      };
+
+      setAiLoading(true);
+      fetchAi();
+    }
+  }, [data]);
 
   // Extract distinct member names from the data.
   const memberNames = new Set();
@@ -93,7 +129,10 @@ const ExpensesGraph = () => {
         <p>No expense data found.</p>
       ) : (
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <LineChart
+            data={data}
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+          >
             <XAxis dataKey="period" />
             <YAxis />
             <Tooltip />
@@ -110,6 +149,20 @@ const ExpensesGraph = () => {
           </LineChart>
         </ResponsiveContainer>
       )}
+
+      {/* AI Summary Section */}
+      <div className="mt-8">
+        {aiLoading ? (
+          <p>Loading AI summary...</p>
+        ) : aiSummary ? (
+          <div className="p-4 bg-gray-100 rounded shadow-md">
+            <h2 className="text-lg font-semibold mb-2">AI Summary</h2>
+            <p>{aiSummary}</p>
+          </div>
+        ) : (
+          <p>No AI summary available.</p>
+        )}
+      </div>
     </div>
   );
 };
