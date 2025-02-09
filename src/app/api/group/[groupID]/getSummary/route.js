@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 
 export async function GET(req, { params }) {
-  const { groupID:groupId } = params; 
+  const { groupID: groupId } = await params; 
 
   try {
     // Fetch group details including its members and each member's user info.
@@ -57,6 +57,8 @@ export async function GET(req, { params }) {
     const memberAggregates = group.members.map((member) => {
       const memberId = member.userId;
 
+      const clerkUserId = member.user.clerkUserID;
+
       // Sum expenses where this member is the creator.
       const totalPaid = expenses
         .filter((exp) => exp.createdById === memberId)
@@ -80,7 +82,10 @@ export async function GET(req, { params }) {
       const settlementBalance = settlementCredit - settlementDebit;
       const netBalance = totalPaid - totalShare + settlementBalance;
 
+      // console.log("getsummary", member.user.userName)
+
       return {
+        clerkUserId,
         userId: memberId,
         role: member.role,
         userName: member.user.userName,

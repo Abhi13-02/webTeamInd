@@ -4,7 +4,6 @@ import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
-
 export async function createGroup(data) {
   try {
     // Retrieve the currently authenticated user's Clerk ID.
@@ -13,40 +12,44 @@ export async function createGroup(data) {
 
     // Find the user in your database based on their Clerk ID.
     const user = await db.user.findUnique({
-      where: {
-        clerkUserID: userId,
-      },
+      where: { clerkUserID: userId },
     });
     if (!user) throw new Error("User not found");
 
-    // Create the group using the provided data.
-    // The 'createdBy' field stores the user id (from your DB, not the Clerk ID).
+    // Prepare additional members if provided.
+    // data.members is expected to be an array of user IDs (strings).
+    const additionalMembers = data.members
+      ? data.members.map((memberId) => ({
+          userId: memberId,
+          role: "MEMBER", // Default role for additional members
+        }))
+      : [];
+
+    // Create the group with nested writes for group members.
+    // The creator is added automatically as an ADMIN.
     const newGroup = await db.group.create({
       data: {
         name: data.name,
         description: data.description || null,
         goalBudget: data.goalBudget || null,
         createdBy: user.id,
-      },
-    });
-
-    // Automatically add the creator to the group as an ADMIN member.
-    await db.groupMember.create({
-      data: {
-        userId: user.id,
-        groupId: newGroup.id,
-        role: "ADMIN", // Use the enum value for GroupRole. Make sure it's uppercase as defined.
+        members: {
+          create: [
+            { userId: user.id, role: "ADMIN" }, // Creator becomes ADMIN
+            ...additionalMembers,
+          ],
+        },
       },
     });
 
     revalidatePath("/dashboard");
     return { success: true, data: newGroup };
-
   } catch (error) {
     console.error("Error creating group:", error);
-    throw new Error("error.message");
+    throw new Error(error.message || "Error creating group");
   }
 }
+
 
 
 export async function deleteGroup(groupId) {

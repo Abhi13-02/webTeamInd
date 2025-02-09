@@ -19,11 +19,12 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { useUser } from "@clerk/nextjs";
-import { createGroup, deleteGroup , getGroupsForUser } from "@/serverActions/dashboardActions";
+import { createGroup, deleteGroup, getGroupsForUser } from "@/serverActions/dashboardActions";
 
 export default function Dashboard() {
   // State to store groups
   const [groups, setGroups] = useState([]);
+  // const [role, setRole] = useState(null);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState(null);
 
@@ -38,6 +39,11 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(false);
 
+  // State for member search and selection
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedMembers, setSelectedMembers] = useState([]);
+
   // Get the current user from Clerk
   const { user } = useUser();
 
@@ -51,8 +57,8 @@ export default function Dashboard() {
       if (!res.success) {
         throw new Error("Failed to fetch groups");
       }
-      const data =  res.data;
-      setGroups(data);
+      setGroups(res.data);
+      // setRole(res.data.user);
     } catch (error) {
       setGroupsError(error);
       toast.error(error.message);
@@ -76,19 +82,67 @@ export default function Dashboard() {
     }));
   };
 
+  // Handle member search input change
+  const handleSearchChange = async (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    if (query.trim().length === 0) {
+      setSearchResults([]);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+      if (!res.ok) {
+        throw new Error("Failed to search users");
+      }
+      const data = await res.json();
+      // Expect data to be an array of user objects: [{ id, userName, email, imageUrl }, ...]
+      setSearchResults(data);
+    } catch (error) {
+      toast.error(error.message || "User search failed");
+    }
+  };
+
+  // Handle adding a user from search results as a member
+  const handleAddMember = (userToAdd) => {
+    // Avoid duplicates.
+    if (selectedMembers.some((member) => member.id === userToAdd.id)) {
+      toast("User already added");
+      return;
+    }
+    setSelectedMembers((prev) => [...prev, userToAdd]);
+    // Clear search results for a cleaner UI
+    setSearchResults([]);
+    setSearchQuery("");
+  };
+
+  // Handle removal of a selected member (if needed)
+  const handleRemoveMember = (userId) => {
+    setSelectedMembers((prev) => prev.filter((m) => m.id !== userId));
+  };
+
   // Handle create group form submission
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await createGroup(formData);
+      // Send selected members IDs along with group details.
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        goalBudget: formData.goalBudget,
+        members: selectedMembers.map((m) => m.id),
+      };
+
+      const res = await createGroup(payload);
       if (!res.success) {
         throw new Error("Failed to create group");
       }
       toast.success("Group created successfully");
       setDrawerOpen(false);
-      // Clear form and refresh groups list
+      // Clear form and selected members
       setFormData({ name: "", description: "", goalBudget: "" });
+      setSelectedMembers([]);
       fetchGroups();
     } catch (error) {
       toast.error(error.message || "Something went wrong");
@@ -112,7 +166,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-screen  p-4 bg-gray-100">
+    <div className="h-screen p-4 bg-gray-100">
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <Button onClick={() => setDrawerOpen(true)}>Create New Group</Button>
@@ -126,9 +180,10 @@ export default function Dashboard() {
         ) : groups && groups.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {groups.map((group) => {
-              // Determine the current user's role in the group
+              // Determine the current user's role in the group.
+              // (Assuming that group.createdBy holds the creator's id and group.members contains the groupMember records.)
               const memberInfo = group.members.find(
-                (m) => m.user.id === group.createdBy
+                (m) => m.user.clerkUserId === user.id
               );
               const role = memberInfo ? memberInfo.role : "Unknown";
               return (
@@ -212,6 +267,61 @@ export default function Dashboard() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 step="0.01"
               />
+            </div>
+            {/* Add Members Section */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Add Members
+              </label>
+              <input
+                type="text"
+                placeholder="Search by username..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+              {/* Display search results */}
+              {searchResults.length > 0 && (
+                <ul className="border border-gray-200 mt-2 max-h-40 overflow-auto rounded">
+                  {searchResults.map((result) => (
+                    <li
+                      key={result.id}
+                      className="flex justify-between items-center p-2 hover:bg-gray-100"
+                    >
+                      <span>{result.userName || result.email}</span>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAddMember(result)}
+                      >
+                        Add
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {/* Display selected members */}
+              {selectedMembers.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm font-medium text-gray-700">
+                    Selected Members:
+                  </p>
+                  {selectedMembers.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200"
+                    >
+                      <span>{member.userName || member.email}</span>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleRemoveMember(member.id)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex justify-end">
               <Button type="submit" disabled={loading}>

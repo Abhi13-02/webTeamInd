@@ -14,7 +14,7 @@ export default function Layout({ children }) {
           On md+ screens, add left margin to account for the fixed sidebar (e.g. 16rem, which is md:w-64).
           On mobile, no extra margin is needed.
       */}
-      <main className="flex-1 p-4 ml-0 md:ml-64 bg-green-300">
+      <main className="flex-1 p-2 bg-green-300">
         {children}
       </main>
     </div>
